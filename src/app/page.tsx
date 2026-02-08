@@ -44,7 +44,7 @@ export default function Home() {
 		if (!threadId) {
 			createThread().then(setThreadId);
 		}
-	}, []);
+	}, [createThread, threadId]);
 
 	return (
 		<main>

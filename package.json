@@ -8,6 +8,8 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint",
+		"type:check": "tsc --noEmit",
+		"eslint:check": "eslint .",
 		"sad": "bunx --bun shadcn@latest add"
 	},
 	"dependencies": {
@@ -18,7 +20,7 @@
 		"@convex-dev/rag": "^0.7.0",
 		"@hookform/resolvers": "^5.2.2",
 		"@opencode-ai/sdk": "^1.1.53",
-		"ai": "^5.0.0",
+		"ai": "^6.0.77",
 		"better-auth": "1.4.9",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
