@@ -22,7 +22,7 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
     console.log(`\n--- [ Processing Task: ${taskId} ] ---`);
     console.log(`Goal: ${prompt}\n`);
 
-    const { client, server } = await getOpencode();
+    const { client } = await getOpencode();
 
     try {
         await convex.mutation(api.tasks.updateTaskStatus, { taskId, status: "running" });
@@ -143,7 +143,6 @@ immediately available for you to call by its name in the next turn.`,
             message: `Error: ${error.message}` 
         });
     }
-    // Note: We keep the OpenCode server running across tasks
 }
 
 async function worker() {

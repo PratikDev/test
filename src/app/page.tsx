@@ -30,7 +30,7 @@ export default function Dashboard() {
 	const handleRunTask = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!prompt.trim()) return;
-		const taskId = await createTask({ prompt, taskId: activeTaskId });
+		const taskId = await createTask({ prompt });
 		setActiveTaskId(taskId);
 		setPrompt("");
 	};
@@ -47,10 +47,6 @@ export default function Dashboard() {
 						<p className="text-zinc-500 mt-1">
 							Local OpenCode Worker Dashboard
 						</p>
-					</div>
-					<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
-						<div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-						Worker Online
 					</div>
 				</header>
 

@@ -146,7 +146,7 @@ export type ToolExecutor = (
     client: OpencodeClient,
     args: Record<string, JsonValue>,
     sessionId: string
-) => Promise<any>;
+) => Promise<{data: any}>;
 
 /**
  * Registry mapping implementation IDs to local executors.
@@ -194,7 +194,6 @@ export async function executeRemoteTool(
     sessionId: string
 ) {
     const executor = toolRegistry.get(implementation);
-
     if (executor) {
         return await executor(client, args, sessionId);
     }
