@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { ConvexClientProvider } from "@/components/layout/ConvexClientProvider";
-import Header from "@/components/layout/Header";
-import { ThemeProvider } from "@/components/layout/theme/theme-provider";
-import { ModeToggle } from "@/components/layout/theme/Toggler";
 
 import "./globals.css";
 
@@ -37,21 +34,7 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<ConvexClientProvider>
-					<ThemeProvider
-						attribute="class"
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						<main className="flex flex-col h-screen">
-							<Header />
-							<div className="grow p-6 overflow-auto">{children}</div>
-						</main>
-
-						<div className="fixed bottom-0 right-0 m-5">
-							<ModeToggle />
-						</div>
-					</ThemeProvider>
+					{children}
 				</ConvexClientProvider>
 			</body>
 		</html>

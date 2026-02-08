@@ -16,6 +16,7 @@ import type * as data_tools from "../data/tools.js";
 import type * as http from "../http.js";
 import type * as mutations_thread from "../mutations/thread.js";
 import type * as rag from "../rag.js";
+import type * as tasks from "../tasks.js";
 import type * as tools_registry from "../tools/registry.js";
 import type * as tools_search from "../tools/search.js";
 import type * as tools_seed from "../tools/seed.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "mutations/thread": typeof mutations_thread;
   rag: typeof rag;
+  tasks: typeof tasks;
   "tools/registry": typeof tools_registry;
   "tools/search": typeof tools_search;
   "tools/seed": typeof tools_seed;

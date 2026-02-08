@@ -3,7 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev",
+		"next:dev": "next dev",
+		"orchestrator:dev": "bun run src/orchestrator/agent.ts --worker",
+		"dev": "echo \"⚠️  For better DX, run 'bun run next:dev' and 'bun run orchestrator:dev' in two separate terminals.\" && bun run next:dev & bun run orchestrator:dev",
 		"convex": "convex dev",
 		"build": "next build",
 		"start": "next start",
