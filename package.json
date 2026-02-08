@@ -15,6 +15,9 @@
 		"@ai-sdk/react": "^3.0.75",
 		"@convex-dev/agent": "^0.3.2",
 		"@convex-dev/better-auth": "^0.10.10",
+		"@hookform/resolvers": "^5.2.2",
+		"@opencode-ai/sdk": "^1.1.53",
+		"ai": "^6.0.77",
 		"better-auth": "1.4.9",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -25,6 +28,7 @@
 		"radix-ui": "^1.4.3",
 		"react": "19.2.3",
 		"react-dom": "19.2.3",
+		"react-hook-form": "^7.71.1",
 		"tailwind-merge": "^3.4.0",
 		"zod": "^4.3.6"
 	},

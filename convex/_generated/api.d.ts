@@ -11,9 +11,8 @@
 import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
-import type * as gmail from "../gmail.js";
 import type * as http from "../http.js";
-import type * as tasks from "../tasks.js";
+import type * as mutations_thread from "../mutations/thread.js";
 
 import type {
   ApiFromModules,
@@ -25,9 +24,8 @@ declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   auth: typeof auth;
   chat: typeof chat;
-  gmail: typeof gmail;
   http: typeof http;
-  tasks: typeof tasks;
+  "mutations/thread": typeof mutations_thread;
 }>;
 
 /**
