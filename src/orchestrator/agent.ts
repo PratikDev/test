@@ -1,16 +1,7 @@
 import { google } from "@ai-sdk/google";
-import { generateText, jsonSchema, LanguageModel, stepCountIs, tool, zodSchema } from "ai";
-import { z } from "zod";
-import { convexSearchTool, executeRemoteTool, getRemoteTool, initOpencode, JsonValue, RemoteTool } from "./tools";
+import { generateText, jsonSchema, ModelMessage, tool, Tool } from "ai";
+import { convertToSdkTool, convexSearchTool, initOpencode, RemoteTool } from "./tools";
 
-/**
- * Local Orchestrator Agent
- * 
- * This script demonstrates the main Phase 2 objective:
- * 1. Initialize local OpenCode server/session.
- * 2. Connect to Convex Registry for tool discovery.
- * 3. Execute remote-discovered tools locally via the OpenCode bridge.
- */
 async function main() {
 	const task = process.argv[2];
 	if (!task) {
@@ -21,7 +12,6 @@ async function main() {
 	console.log(`\n--- [ Orchestrator Agent Started ] ---`);
 	console.log(`Goal: ${task}\n`);
 
-    // 1. Initialize OpenCode
     const initResult = await initOpencode();
     const { client, server } = initResult;
     
@@ -31,8 +21,6 @@ async function main() {
         console.warn("[OpenCode] Warning: Failed to get current project metadata (continuing anyway):", projectResponse.error);
     }
     
-    
-    // session.create body only takes parentID and title
     const sessionResponse = await client.session.create({
         body: { title: `Orchestrator Session: ${task.slice(0, 30)}...` } 
     });
@@ -40,69 +28,62 @@ async function main() {
         console.error("[OpenCode] Failed to create session:", sessionResponse.error);
         process.exit(1);
     }
-    const session = sessionResponse.data;
-    const sessionId = session.id;
+    const sessionId = sessionResponse.data.id;
 
-	console.log("Processing task with dynamic tool discovery...");
+	console.log("Processing task with dynamic tool injection...");
     
-    // Correct type name for model in AI SDK 6.x
-    const model = google(process.env.MODEL_NAME!) as LanguageModel;
-
-	const result = await generateText({
-		model,
-		prompt: task,
-		system: `
-            You are a Local Orchestrator Agent. 
-            You must complete the user's task using available tools.
-            If you lack a tool (e.g., file system access), use 'search_remote_tools' to find it in the Convex registry.
-            Once a tool is found, use 'execute_remote_tool' to run it.
-        `,
-		tools: {
-            search_remote_tools: tool({
-                description: "Search the remote Convex tool registry for tools.",
-                inputSchema: zodSchema(z.object({
-                    query: z.string().describe("Tool search query"),
-                })),
-                execute: async ({ query }: { query: string }) => {
-                    return await convexSearchTool.execute({ query });
-                }
-            }),
-            execute_remote_tool: tool({
-                description: "Executes a discovered tool locally via the OpenCode bridge.",
-                inputSchema: jsonSchema({
-                    type: "object",
-                    properties: {
-                        toolName: { type: "string", description: "The name of the discovered tool" },
-                        args: { type: "object", description: "Arguments for the tool" }
-                    },
-                    required: ["toolName", "args"]
-                }),
-                execute: async ({ toolName, args }: { toolName: string, args: Record<string, JsonValue> }) => {
-                    const foundTool: RemoteTool | null = await getRemoteTool(toolName);
-                    if (!foundTool) return { error: `Tool ${toolName} not found in registry.` };
-                    
-                    try {
-                        const executionResult = await executeRemoteTool(client, foundTool.name, foundTool.implementation, args, sessionId);
-                        return { result: executionResult.data as JsonValue };
-                    } catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        return { error: errorMessage };
+    const model = google(process.env.MODEL_NAME!);
+    
+    // Start with core tools
+    const activeTools: Record<string, Tool<any, any>> = {
+        search_remote_tools: tool({
+            description: convexSearchTool.description,
+            inputSchema: jsonSchema(convexSearchTool.parameters as any),
+            execute: async ({ query }: { query: string }) => {
+                const searchResult = await convexSearchTool.execute({ query });
+                
+                if (searchResult.tools && searchResult.tools.length > 0) {
+                    console.log(`[Discovery] Learning ${searchResult.tools.length} new tools...`);
+                    for (const remoteTool of searchResult.tools) {
+                        if (!activeTools[remoteTool.name]) {
+                            activeTools[remoteTool.name] = convertToSdkTool(client, sessionId, remoteTool as RemoteTool);
+                            console.log(`  + Registered: ${remoteTool.name}`);
+                        }
                     }
                 }
-            })
-        },
-        stopWhen: stepCountIs(10),
-	});
+                return searchResult;
+            }
+        })
+    };
 
-	console.log("\n--- [ Agent Response ] ---");
-	console.log(result.text);
+    const messages: ModelMessage[] = [{ role: 'user', content: task }];
+    let step = 0;
+    const maxSteps = 10;
 
-    // Cleanup
+    while (step < maxSteps) {
+        step++;
+        console.log(`\n[Step ${step}] Generating response...`);
+        
+        const result = await generateText({
+            model,
+            system: `You are a Local Orchestrator Agent. Complete the task using available tools.
+If you lack a tool, use 'search_remote_tools' to find it. Once found, the tool will be 
+immediately available for you to call by its name in the next turn.`,
+            messages,
+            tools: activeTools,
+        });
+
+        // Add assistant response to history
+        messages.push(...result.response.messages);
+
+        if (result.toolCalls.length === 0) {
+            console.log("\n--- [ Agent Response ] ---");
+            console.log(result.text);
+            break;
+        }
+    }
+
     server.close();
 }
 
-main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.stack || error.message : String(error);
-	console.error("\n[Fatal Error]:", message);
-	process.exit(1);
-});
+main().catch(console.error);

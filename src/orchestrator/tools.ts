@@ -1,5 +1,6 @@
 import { createOpencodeClient, createOpencodeServer } from "@opencode-ai/sdk";
 import { OpencodeClient } from "@opencode-ai/sdk/client";
+import { jsonSchema, tool } from "ai";
 import { api } from "../../convex/_generated/api";
 import { client as convexClient } from "./convex";
 
@@ -114,60 +115,101 @@ export async function getRemoteTool(name: string): Promise<RemoteTool | null> {
 }
 
 /**
- * Bridges a remote tool definition to local execution via OpenCode.
+ * Converts a RemoteTool definition into a functional AI SDK tool.
+ */
+export function convertToSdkTool(
+    client: OpencodeClient,
+    sessionId: string,
+    remoteTool: RemoteTool
+) {
+    return tool({
+        description: remoteTool.description,
+        inputSchema: jsonSchema(remoteTool.parameters as any),
+        execute: async (args: any) => {
+            console.log(`[Bridge] Executing ${remoteTool.name} locally via ${remoteTool.implementation}...`);
+            const result = await executeRemoteTool(
+                client,
+                remoteTool.name,
+                remoteTool.implementation,
+                args,
+                sessionId
+            );
+            return result.data as JsonValue;
+        },
+    });
+}
+
+/**
+ * Type for functions that execute tool logic locally.
+ */
+export type ToolExecutor = (
+    client: OpencodeClient,
+    args: Record<string, JsonValue>,
+    sessionId: string
+) => Promise<any>;
+
+/**
+ * Registry mapping implementation IDs to local executors.
+ */
+const toolRegistry = new Map<string, ToolExecutor>();
+
+// --- Registry Initialization ---
+
+toolRegistry.set("opencode:readFile", async (client, args) => {
+    return await client.file.read({
+        query: { path: String(args.path) }
+    });
+});
+
+toolRegistry.set("opencode:runCommand", async (client, args, sessionId) => {
+    return await client.session.shell({
+        path: { id: sessionId },
+        body: { 
+            agent: "orchestrator",
+            command: String(args.command)
+        }
+    });
+});
+
+toolRegistry.set("opencode:searchCode", async (client, args) => {
+    return await client.find.text({
+        query: { pattern: String(args.pattern) }
+    });
+});
+
+toolRegistry.set("opencode:listDirectory", async (client, args) => {
+    return await client.file.list({
+        query: { path: String(args.path || ".") }
+    });
+});
+
+/**
+ * Executes a tool locally via OpenCode using the modular registry.
  */
 export async function executeRemoteTool(
-    client: OpencodeClient, 
-    toolName: string, 
-    implementation: string, 
-    args: Record<string, JsonValue>, 
+    client: OpencodeClient,
+    toolName: string,
+    implementation: string,
+    args: Record<string, JsonValue>,
     sessionId: string
 ) {
-    console.log(`[Bridge] Executing ${toolName} locally via ${implementation}...`);
-    
-    switch (implementation) {
-        case "opencode:readFile": {
-            const pathValue = args["path"];
-            const path = typeof pathValue === "string" ? pathValue : "";
-            return await client.file.read({ query: { path } });
-        }
-        case "opencode:writeFile": {
-            const pathValue = args["path"];
-            const contentValue = args["content"];
-            const path = typeof pathValue === "string" ? pathValue : "";
-            const content = typeof contentValue === "string" ? contentValue : "";
-            return await client.session.shell({ 
-                path: { id: sessionId },
-                body: { 
-                    agent: "orchestrator",
-                    command: `echo '${content.replace(/'/g, "'\\''")}' > "${path}"` 
-                } 
-            });
-        }
-        case "opencode:listDirectory": {
-            const pathValue = args["path"];
-            const path = typeof pathValue === "string" ? pathValue : "";
-            return await client.file.list({ query: { path } });
-        }
-        case "opencode:runCommand": {
-            const commandValue = args["command"];
-            const command = typeof commandValue === "string" ? commandValue : "";
-            return await client.session.shell({ 
-                path: { id: sessionId },
-                body: { 
-                    agent: "orchestrator",
-                    command 
-                } 
-            });
-        }
-        case "opencode:searchCode": {
-            const queryValue = args["query"];
-            const pathValue = args["path"];
-            const pattern = typeof queryValue === "string" ? queryValue : "";
-            const directory = typeof pathValue === "string" ? pathValue : ".";
-            return await client.find.text({ query: { pattern, directory } });
-        }
-        default:
-            throw new Error(`Unsupported implementation: ${implementation}`);
+    const executor = toolRegistry.get(implementation);
+
+    if (executor) {
+        return await executor(client, args, sessionId);
     }
+
+    // Default: try to call as a generic command if implementation starts with 'opencode:'
+    if (implementation.startsWith("opencode:")) {
+        const cmd = implementation.replace("opencode:", "");
+        return await client.session.shell({
+            path: { id: sessionId },
+            body: { 
+                agent: "orchestrator",
+                command: `${cmd} ${Object.values(args).join(" ")}`
+            }
+        });
+    }
+
+    throw new Error(`Execution for ${implementation} (requested by ${toolName}) is not implemented in any registry.`);
 }
