@@ -8,13 +8,8 @@
  * @module
  */
 
-import type * as agent from "../agent.js";
-import type * as auth from "../auth.js";
-import type * as chat from "../chat.js";
 import type * as constants_tools from "../constants/tools.js";
 import type * as data_tools from "../data/tools.js";
-import type * as http from "../http.js";
-import type * as mutations_thread from "../mutations/thread.js";
 import type * as rag from "../rag.js";
 import type * as tasks from "../tasks.js";
 import type * as tools_registry from "../tools/registry.js";
@@ -29,13 +24,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  agent: typeof agent;
-  auth: typeof auth;
-  chat: typeof chat;
   "constants/tools": typeof constants_tools;
   "data/tools": typeof data_tools;
-  http: typeof http;
-  "mutations/thread": typeof mutations_thread;
   rag: typeof rag;
   tasks: typeof tasks;
   "tools/registry": typeof tools_registry;

@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const createTask = mutation({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
+  args: { prompt: v.string(), taskId: v.optional(v.id("tasks")) },
+  handler: async (ctx, { prompt, taskId }) => {
     return await ctx.db.insert("tasks", {
       prompt,
       status: "pending",

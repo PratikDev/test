@@ -3,17 +3,27 @@ import { generateText, jsonSchema, ModelMessage, tool, Tool } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { convertToSdkTool, convexSearchTool, initOpencode, RemoteTool } from "./tools";
+import { convertToSdkTool, convexSearchTool, initOpencode, OpencodeInit, RemoteTool } from "./tools";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// Singleton OpenCode instance
+let opencodeInstance: OpencodeInit | null = null;
+
+async function getOpencode(): Promise<OpencodeInit> {
+    if (!opencodeInstance) {
+        console.log("[OpenCode] Initializing for the first time...");
+        opencodeInstance = await initOpencode();
+    }
+    return opencodeInstance;
+}
 
 async function runTask(taskId: Id<"tasks">, prompt: string) {
     console.log(`\n--- [ Processing Task: ${taskId} ] ---`);
     console.log(`Goal: ${prompt}\n`);
 
-    const initResult = await initOpencode();
-    const { client, server } = initResult;
-    
+    const { client, server } = await getOpencode();
+
     try {
         await convex.mutation(api.tasks.updateTaskStatus, { taskId, status: "running" });
         await convex.mutation(api.tasks.addStep, { 
@@ -26,14 +36,14 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
         const sessionResponse = await client.session.create({
             body: { title: `Orchestrator Session: ${prompt.slice(0, 30)}...` } 
         });
-        
+
         if (sessionResponse.error) {
             throw new Error(`Failed to create session: ${sessionResponse.error}`);
         }
         const sessionId = sessionResponse.data.id;
 
         const model = google(process.env.MODEL_NAME!);
-        
+
         const activeTools: Record<string, Tool<any, any>> = {
             search_remote_tools: tool({
                 description: convexSearchTool.description,
@@ -46,7 +56,7 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
                     });
 
                     const searchResult = await convexSearchTool.execute({ query });
-                    
+
                     if (searchResult.tools && searchResult.tools.length > 0) {
                         for (const remoteTool of searchResult.tools) {
                             if (!activeTools[remoteTool.name]) {
@@ -132,9 +142,8 @@ immediately available for you to call by its name in the next turn.`,
             type: "info", 
             message: `Error: ${error.message}` 
         });
-    } finally {
-        server.close();
     }
+    // Note: We keep the OpenCode server running across tasks
 }
 
 async function worker() {

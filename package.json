@@ -4,9 +4,10 @@
 	"private": true,
 	"scripts": {
 		"next:dev": "next dev",
-		"orchestrator:dev": "bun run src/orchestrator/agent.ts --worker",
-		"dev": "echo \"⚠️  For better DX, run 'bun run next:dev' and 'bun run orchestrator:dev' in two separate terminals.\" && bun run next:dev & bun run orchestrator:dev",
+		"agent:dev": "bun run src/orchestrator/agent.ts --worker",
+		"dev": "echo \"⚠️  For better DX, run 'bun run next:dev' and 'bun run agent:dev' in two separate terminals.\" && bun run next:dev & bun run agent:dev",
 		"convex": "convex dev",
+		"convex:seed": "convex run tools/seed:seedTools",
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint",
