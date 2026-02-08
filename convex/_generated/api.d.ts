@@ -10,6 +10,7 @@
 
 import type * as constants_tools from "../constants/tools.js";
 import type * as data_tools from "../data/tools.js";
+import type * as logs from "../logs.js";
 import type * as rag from "../rag.js";
 import type * as tasks from "../tasks.js";
 import type * as tools_registry from "../tools/registry.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   "constants/tools": typeof constants_tools;
   "data/tools": typeof data_tools;
+  logs: typeof logs;
   rag: typeof rag;
   tasks: typeof tasks;
   "tools/registry": typeof tools_registry;

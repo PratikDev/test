@@ -25,4 +25,27 @@ export default defineSchema({
     data: v.optional(v.any()), // Can store tool arguments or results
     timestamp: v.number(),
   }).index("by_taskId", ["taskId"]),
+
+  logs: defineTable({
+    timestamp: v.number(),
+    level: v.union(
+      v.literal("debug"),
+      v.literal("info"),
+      v.literal("warn"),
+      v.literal("error")
+    ),
+    message: v.string(),
+    traceId: v.optional(v.string()),
+    taskId: v.optional(v.id("tasks")),
+    component: v.string(),
+    metadata: v.optional(v.any()),
+    error: v.optional(v.object({
+      message: v.string(),
+      stack: v.optional(v.string())
+    }))
+  })
+  .index("by_taskId", ["taskId"])
+  .index("by_traceId", ["traceId"])
+  .index("by_timestamp", ["timestamp"])
+  .index("by_level", ["level"])
 });
