@@ -32,7 +32,7 @@ export default function Dashboard() {
 		if (!prompt.trim()) return;
 		const taskId = await createTask({ prompt });
 		setActiveTaskId(taskId);
-		// setPrompt("");
+		setPrompt("");
 	};
 
 	return (
