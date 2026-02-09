@@ -1,8 +1,5 @@
 "use client";
 
-import { api } from "@/../convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useMutation, useQuery } from "convex/react";
 import {
 	CheckCircle2,
@@ -15,6 +12,12 @@ import {
 	Wrench,
 } from "lucide-react";
 import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import { api } from "@/../convex/_generated/api";
+import { SUGGESTED_PROMPTS } from "@/constants/prompts";
 
 export default function Dashboard() {
 	const [prompt, setPrompt] = useState("");
@@ -54,25 +57,44 @@ export default function Dashboard() {
 				<section className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
 					<form
 						onSubmit={handleRunTask}
-						className="flex gap-4"
+						className="space-y-4"
 					>
-						<div className="relative flex-1">
-							<Terminal className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-							<Input
-								placeholder="What should the agent do? (e.g., 'Read package.json')"
-								value={prompt}
-								onChange={(e) => setPrompt(e.target.value)}
-								className="pl-12 h-14 bg-zinc-950/50 border-zinc-800 text-lg focus:border-blue-500/50 transition-all rounded-xl"
-							/>
+						{/* Suggested Prompts */}
+						<div className="overflow-x-auto pb-2 -mx-1 px-1">
+							<div className="flex gap-2 min-w-max">
+								{SUGGESTED_PROMPTS.map((suggestedPrompt, idx) => (
+									<button
+										key={idx}
+										type="button"
+										onClick={() => setPrompt(suggestedPrompt)}
+										className="px-3.5 py-1 border border-zinc-600 bg-zinc-900 hover:bg-zinc-800 cursor-pointer text-xs rounded-full transition-all whitespace-nowrap"
+									>
+										{suggestedPrompt}
+									</button>
+								))}
+							</div>
 						</div>
-						<Button
-							type="submit"
-							size="lg"
-							className="h-14 px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-900/20"
-						>
-							<PlayIcon className="w-5 h-5 mr-2" />
-							Run Agent
-						</Button>
+
+						{/* Input and Button */}
+						<div className="flex gap-4">
+							<div className="relative flex-1">
+								<Terminal className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+								<Input
+									placeholder="What should the agent do? (e.g., 'Read package.json')"
+									value={prompt}
+									onChange={(e) => setPrompt(e.target.value)}
+									className="pl-12 h-14 bg-zinc-950/50 border-zinc-800 text-lg focus:border-blue-500/50 transition-all rounded-xl"
+								/>
+							</div>
+							<Button
+								type="submit"
+								size="lg"
+								className="h-14 px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-900/20"
+							>
+								<PlayIcon className="w-5 h-5 mr-2" />
+								Run Agent
+							</Button>
+						</div>
 					</form>
 				</section>
 
