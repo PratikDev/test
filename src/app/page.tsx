@@ -102,7 +102,7 @@ export default function Dashboard() {
 					{/* Main Execution Log */}
 					<div className="lg:col-span-2 space-y-6">
 						{!task ? (
-							<div className="h-[500px] flex items-center justify-center border-2 border-dashed border-zinc-800 rounded-2xl text-zinc-600 italic">
+							<div className="h-125 flex items-center justify-center border-2 border-dashed border-zinc-800 rounded-2xl text-zinc-600 italic">
 								Select a task or run a new one to see progress
 							</div>
 						) : (
@@ -128,7 +128,7 @@ export default function Dashboard() {
 								</div>
 
 								{/* Audit Log */}
-								<div className="p-6 space-y-6 max-h-[600px] overflow-y-auto custom-scrollbar">
+								<div className="p-6 space-y-6 max-h-150 overflow-y-auto custom-scrollbar">
 									{task.steps.map((step: any, idx: number) => (
 										<div
 											key={idx}

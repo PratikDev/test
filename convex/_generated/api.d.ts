@@ -13,10 +13,12 @@ import type * as data_tools from "../data/tools.js";
 import type * as logs from "../logs.js";
 import type * as rag from "../rag.js";
 import type * as tasks from "../tasks.js";
-import type * as tools_registry from "../tools/registry.js";
-import type * as tools_search from "../tools/search.js";
-import type * as tools_seed from "../tools/seed.js";
-import type * as tools_types from "../tools/types.js";
+import type * as tools_registry_secret from "../tools/registry/secret.js";
+import type * as tools_utils_ragAddTool from "../tools/utils/ragAddTool.js";
+import type * as tools_utils_registry from "../tools/utils/registry.js";
+import type * as tools_utils_search from "../tools/utils/search.js";
+import type * as tools_utils_seed from "../tools/utils/seed.js";
+import type * as tools_utils_types from "../tools/utils/types.js";
 
 import type {
   ApiFromModules,
@@ -30,10 +32,12 @@ declare const fullApi: ApiFromModules<{
   logs: typeof logs;
   rag: typeof rag;
   tasks: typeof tasks;
-  "tools/registry": typeof tools_registry;
-  "tools/search": typeof tools_search;
-  "tools/seed": typeof tools_seed;
-  "tools/types": typeof tools_types;
+  "tools/registry/secret": typeof tools_registry_secret;
+  "tools/utils/ragAddTool": typeof tools_utils_ragAddTool;
+  "tools/utils/registry": typeof tools_utils_registry;
+  "tools/utils/search": typeof tools_utils_search;
+  "tools/utils/seed": typeof tools_utils_seed;
+  "tools/utils/types": typeof tools_utils_types;
 }>;
 
 /**

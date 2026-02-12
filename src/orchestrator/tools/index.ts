@@ -9,7 +9,7 @@ import { JsonValue, RemoteTool, StatusAwareResponse } from "@/types";
 export async function searchTools(
 	query: string,
 ): Promise<StatusAwareResponse<RemoteTool[]>> {
-	const result = await convexClient.action(api.tools.search.searchTools, {
+	const result = await convexClient.action(api.tools.utils.search.searchTools, {
 		query,
 	});
 
@@ -32,6 +32,7 @@ export async function searchTools(
 				name: nameOutput,
 				description: t.description,
 				parameters: t.parameters,
+				type: t.type,
 				implementation: implOutput,
 			};
 		}),
@@ -56,20 +57,12 @@ export function convertToSdkTool(
 					`tool.${remoteTool.name}`,
 					{ implementation: remoteTool.implementation, args },
 					async () => {
-						const result = await executeRemoteTool(
-							remoteTool.name,
-							remoteTool.implementation,
-							args,
-						);
+						const result = await executeRemoteTool(remoteTool, args);
 						return result.data;
 					},
 				);
 			} else {
-				const result = await executeRemoteTool(
-					remoteTool.name,
-					remoteTool.implementation,
-					args,
-				);
+				const result = await executeRemoteTool(remoteTool, args);
 				return result.data;
 			}
 		},
@@ -77,19 +70,28 @@ export function convertToSdkTool(
 }
 
 async function executeRemoteTool(
-	toolName: string,
-	implementation: string,
+	tool: RemoteTool,
 	args: Record<string, JsonValue>,
 ) {
+	const { implementation, name: toolName, type } = tool;
+
 	if (!implementation.startsWith("convex:")) {
 		throw new Error(`Unsupported implementation: ${implementation}`);
 	}
 
 	const actionName = implementation.replace("convex:", "");
-	const result = (await convexClient.action(
-		makeFunctionReference<"action">(actionName),
-		args,
-	)) as StatusAwareResponse;
+	const executionObject = {
+		action: () =>
+			convexClient.action(makeFunctionReference<"action">(actionName), args),
+		query: () =>
+			convexClient.query(makeFunctionReference<"query">(actionName), args),
+		mutation: () =>
+			convexClient.mutation(
+				makeFunctionReference<"mutation">(actionName),
+				args,
+			),
+	};
+	const result = (await executionObject[type]()) as StatusAwareResponse;
 	if (!result.success) {
 		throw new Error(
 			`Execution for ${implementation} (requested by tool ${toolName}) failed: ${result.message}`,

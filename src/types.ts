@@ -1,3 +1,5 @@
+import { ToolSchema } from "../convex/tools/utils/types";
+
 type SuccessResponse<T> = {
 	success: true;
 	data: T;
@@ -16,9 +18,6 @@ export type JsonValue =
 	| { [key: string]: JsonValue }
 	| JsonValue[];
 
-export interface RemoteTool {
-	name: string;
-	description: string;
+export interface RemoteTool extends ToolSchema {
 	parameters: Record<string, JsonValue>;
-	implementation: string;
 }

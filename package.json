@@ -7,7 +7,7 @@
 		"agent:dev": "bun run src/orchestrator/agent.ts --worker",
 		"dev": "bun run agent:dev & bun run next:dev",
 		"convex": "convex dev",
-		"convex:seed": "convex dev --once && convex run tools/seed:seedTools",
+		"convex:seed": "convex dev --once && convex run tools/utils/seed:seedTools",
 		"convex:env:set": "convex env set",
 		"build": "next build",
 		"start": "next start",

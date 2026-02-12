@@ -1,4 +1,5 @@
 export const SUGGESTED_PROMPTS = [
+	"What's the webhook secret in the remote tools?",
 	"List all the files src/lib directory",
 	"How many dependencies does the project have?",
 	"What version of React is the project using?",

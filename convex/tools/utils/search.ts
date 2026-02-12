@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { action } from "@/../convex/_generated/server";
 import { TOOLS_NAMESPACE } from "@/../convex/constants/tools";
 import { rag } from "@/../convex/rag";
+import { Tool } from "./types";
 
 /**
  * Search for tools relevant to a task description using semantic search
@@ -17,7 +18,7 @@ export const searchTools = action({
 			namespace: TOOLS_NAMESPACE,
 			query,
 			limit,
-			vectorScoreThreshold: 0.3,
+			vectorScoreThreshold: 0.5,
 		});
 
 		// Transform entries to tool format
@@ -27,8 +28,9 @@ export const searchTools = action({
 			parameters: entry.metadata?.parameters
 				? JSON.parse(entry.metadata.parameters as string)
 				: {},
+			type: entry.metadata?.type,
 			implementation: entry.metadata?.implementation,
-		}));
+		})) as Tool[];
 
 		return {
 			tools,
