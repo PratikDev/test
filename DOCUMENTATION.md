@@ -1,15 +1,25 @@
 # Improvements
 
-1. Threads
+1. Threads (agent memory)
 2. Single Convex instance for all operations
 3. More schema validation
 4. Fix all any/unknown types
 5. Deploy to cloud
 
+# Struggles
+
+- **Convex AI Agent**
+- **Rag implementation**:
+  - new the concept. but never used. didn't know `embeddingDimension` and `textEmbeddingModel` have to be compatible with each other
+- **dynamic tool calling**:
+  - didn't know even what is dynamic tool calling. had to take some ai and yt tutorial help
+- **OpenCode SDK**
+
 # Research and findings
 
 1. NextJS server side fetch failed issue on Bun Linux (https://github.com/vercel/next.js/discussions/70423#discussioncomment-11709365)
 2. opencode sdk requires client authentication header (not mentioned in doc at all. they did mention it [here](https://opencode.ai/docs/sdk/#auth) but i didn't find it enough useful. had to go through some github issues, other users' implementations, and AI - that basically read the source code to figure it out)
+3. `textEmbeddingModel` and `embeddingDimension` should be compatible with each other in rag implementation
 
 # Limitations
 

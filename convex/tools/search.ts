@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { action } from "../_generated/server";
-import { TOOLS_NAMESPACE } from "../constants/tools";
-import { rag } from "../rag";
+
+import { action } from "@/../convex/_generated/server";
+import { TOOLS_NAMESPACE } from "@/../convex/constants/tools";
+import { rag } from "@/../convex/rag";
 
 /**
  * Search for tools relevant to a task description using semantic search
@@ -23,7 +24,6 @@ export const searchTools = action({
 		const tools = entries.map((entry) => ({
 			name: entry.title || entry.key,
 			description: entry.text,
-			category: entry.metadata?.category,
 			parameters: entry.metadata?.parameters
 				? JSON.parse(entry.metadata.parameters as string)
 				: {},

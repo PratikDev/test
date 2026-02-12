@@ -1,38 +1,15 @@
 import { google } from "@ai-sdk/google";
-import {
-	generateText,
-	jsonSchema,
-	JSONSchema7,
-	ModelMessage,
-	tool,
-	Tool,
-} from "ai";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { generateText, ModelMessage, tool, Tool } from "ai";
+import z from "zod";
+
+import { api } from "@/../convex/_generated/api";
+import { Id } from "@/../convex/_generated/dataModel";
+import { httpClient } from "./convex";
+import { LOCAL_TOOLS } from "./data/LOCAL_TOOLS";
 import { logger } from "./logger";
-import {
-	convertToSdkTool,
-	convexSearchTool,
-	initOpencode,
-	OpencodeInit,
-	RemoteTool,
-} from "./tools";
-
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
-let opencodeInstance: OpencodeInit | null = null;
-
-async function getOpencode() {
-	if (!opencodeInstance) {
-		logger.info(
-			{ component: "opencode" },
-			"Initializing OpenCode for the first time...",
-		);
-		opencodeInstance = await initOpencode();
-	}
-	return opencodeInstance;
-}
+import { client } from "./opencode";
+import { SYSTEM_PROMPT } from "./prompts";
+import { convertToSdkTool, searchTools } from "./tools";
 
 async function runTask(taskId: Id<"tasks">, prompt: string) {
 	const taskLogger = logger.child({
@@ -46,14 +23,12 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 
 	taskLogger.info({ goal: prompt }, `Starting task: ${prompt.slice(0, 50)}...`);
 
-	const { client } = await getOpencode();
-
 	try {
-		await convex.mutation(api.tasks.updateTaskStatus, {
+		await httpClient.mutation(api.tasks.updateTaskStatus, {
 			taskId,
 			status: "running",
 		});
-		await convex.mutation(api.tasks.addStep, {
+		await httpClient.mutation(api.tasks.addStep, {
 			taskId,
 			type: "info",
 			message: "Initializing OpenCode session...",
@@ -79,10 +54,17 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 
 		const activeTools: Record<string, Tool<any, any>> = {
 			search_remote_tools: tool({
-				description: convexSearchTool.description,
-				inputSchema: jsonSchema(convexSearchTool.parameters as JSONSchema7),
-				execute: async ({ query }: { query: string }) => {
-					await convex.mutation(api.tasks.addStep, {
+				description:
+					"Search the remote Convex tool registry for tools that can help with the current task. Use this if you don't have the necessary local tools.",
+				inputSchema: z.object({
+					query: z
+						.string()
+						.describe(
+							"A description of the tools you are looking for (e.g., 'web search', 'telegram bot')",
+						),
+				}),
+				execute: async ({ query }) => {
+					await httpClient.mutation(api.tasks.addStep, {
 						taskId,
 						type: "info",
 						message: `Searching for tools: "${query}"`,
@@ -91,23 +73,27 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 					const searchResult = await taskLogger.trackAsync(
 						"tool.search",
 						{ query },
-						() => convexSearchTool.execute({ query }),
+						async () => await searchTools(query),
 					);
+					if (!searchResult.success) {
+						return {
+							success: false,
+							message: searchResult.message,
+						};
+					}
 
-					if (searchResult.tools && searchResult.tools.length > 0) {
-						for (const remoteTool of searchResult.tools) {
+					if (searchResult.data.length > 0) {
+						for (const remoteTool of searchResult.data) {
 							if (!activeTools[remoteTool.name]) {
 								activeTools[remoteTool.name] = convertToSdkTool(
-									client,
-									sessionId,
-									remoteTool as RemoteTool,
+									remoteTool,
 									taskLogger,
 								);
 								taskLogger.info(
 									{ toolName: remoteTool.name },
 									`Registered new tool: ${remoteTool.name}`,
 								);
-								await convex.mutation(api.tasks.addStep, {
+								await httpClient.mutation(api.tasks.addStep, {
 									taskId,
 									type: "info",
 									message: `Registered new tool: ${remoteTool.name}`,
@@ -118,6 +104,7 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 					return searchResult;
 				},
 			}),
+			...LOCAL_TOOLS,
 		};
 
 		const messages: ModelMessage[] = [{ role: "user", content: prompt }];
@@ -125,7 +112,7 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 
 		while (step < maxSteps) {
 			step++;
-			await convex.mutation(api.tasks.addStep, {
+			await httpClient.mutation(api.tasks.addStep, {
 				taskId,
 				type: "info",
 				message: `Step ${step}: Generating response...`,
@@ -182,14 +169,12 @@ async function runTask(taskId: Id<"tasks">, prompt: string) {
 
 			const result = await generateText({
 				model,
-				system: `You are a Local Orchestrator Agent. Complete the task using available tools.
-If you lack a tool, use 'search_remote_tools' to find it. Once found, the tool will be 
-immediately available for you to call by its name in the next turn.`,
+				system: SYSTEM_PROMPT,
 				messages,
 				tools: activeTools,
 				onStepFinish: async ({ toolCalls, toolResults }) => {
 					for (const toolCall of toolCalls) {
-						await convex.mutation(api.tasks.addStep, {
+						await httpClient.mutation(api.tasks.addStep, {
 							taskId,
 							type: "tool_call",
 							message: `Calling ${toolCall.toolName}...`,
@@ -197,7 +182,7 @@ immediately available for you to call by its name in the next turn.`,
 						});
 					}
 					for (const toolResult of toolResults) {
-						await convex.mutation(api.tasks.addStep, {
+						await httpClient.mutation(api.tasks.addStep, {
 							taskId,
 							type: "tool_result",
 							message: `Result from ${toolResult.toolName}`,
@@ -212,14 +197,14 @@ immediately available for you to call by its name in the next turn.`,
 			if (result.toolCalls.length === 0) {
 				const totalDuration = Date.now() - taskStartTime;
 
-				await convex.mutation(api.tasks.addStep, {
+				await httpClient.mutation(api.tasks.addStep, {
 					taskId,
 					type: "final",
 					message: "Final response generated",
 					data: result.text,
 				});
 
-				await convex.mutation(api.tasks.updateTaskStatus, {
+				await httpClient.mutation(api.tasks.updateTaskStatus, {
 					taskId,
 					status: "completed",
 					result: result.text,
@@ -259,12 +244,12 @@ immediately available for you to call by its name in the next turn.`,
 			`Task failed after ${totalDuration}ms`,
 		);
 
-		await convex.mutation(api.tasks.updateTaskStatus, {
+		await httpClient.mutation(api.tasks.updateTaskStatus, {
 			taskId,
 			status: "failed",
 			result: error.message,
 		});
-		await convex.mutation(api.tasks.addStep, {
+		await httpClient.mutation(api.tasks.addStep, {
 			taskId,
 			type: "info",
 			message: `Error: ${error.message}`,
@@ -281,7 +266,7 @@ async function worker() {
 
 	while (true) {
 		try {
-			const pendingTask = await convex.query(api.tasks.getPendingTask);
+			const pendingTask = await httpClient.query(api.tasks.getPendingTask);
 			if (pendingTask) {
 				logger.info(
 					{ taskId: pendingTask._id },
